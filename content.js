@@ -1,18 +1,47 @@
-import {
-  BackgroundEventTypes,
-  PopupEventTypes,
-  StatusTextStates,
-} from "./constants";
+// import {
+//   BackgroundEventTypes,
+//   PopupEventTypes,
+//   StatusTextStates,
+// } from "./constants";
+
+// check how to import here
+
+// todo: remove
+const PopupEventTypes = {
+  STATUS: "status",
+};
+
+const BackgroundEventTypes = {
+  REDIRECT_URL: "redirect-url",
+};
+
+const StatusTextStates = {
+  LOADING: "loading",
+  NOT_IN_VALID_WEBSITE: "not-in-valid-website",
+  DONE: "done",
+  ERROR: "error",
+  UNSET: "unset",
+};
+
+// todo: remove -------------------
 
 // Listen for messages from the popup
 browser.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-  if (request.command !== "redirectToSpotify") return;
+  if (request.command !== "redirectToSpotify") {
+    browser.runtime.sendMessage({
+      type: PopupEventTypes.STATUS,
+      status: StatusTextStates.UNSET,
+    });
+    return;
+  }
 
   if (!window.location.href.includes("open.spotify.com/track")) {
     browser.runtime.sendMessage({
       type: PopupEventTypes.STATUS,
       status: StatusTextStates.NOT_IN_VALID_WEBSITE,
     });
+
+    return;
   }
 
   browser.runtime.sendMessage({
