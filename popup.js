@@ -1,36 +1,64 @@
-// todo: remove
-const PopupEventTypes = {
-  STATUS: "status",
+const SPOTIFY_TRACK_URL = "open.spotify.com/track";
+
+const getUrlInYoutubeMusic = async ({ artist, title }) => {
+  const titleQuery = title.split(" ").join("+");
+  const artistQuery = artist.split(" ").join("+");
+
+  const youtubeUrl = `https://www.youtube.com/results?search_query=${titleQuery}+${artistQuery}`;
+  const finalUrl = "https://corsproxy.io/?" + encodeURIComponent(youtubeUrl);
+
+  const response = await fetch(finalUrl);
+  const text = await response.text();
+  const indexOfFirstResult = text.indexOf("/watch?v=");
+  const resultUrl =
+    "https://music.youtube.com/" + text.substr(indexOfFirstResult + 1, 19);
+
+  return resultUrl;
 };
 
-const StatusTextStates = {
-  LOADING: "loading",
-  NOT_IN_VALID_WEBSITE: "not-in-valid-website",
-  DONE: "done",
-  ERROR: "error",
-  UNSET: "unset",
+// works only in english
+const getTitleAndArtistFromTab = (tab) => {
+  const documentTitle = tab.title;
+  const byKeywordIdx = documentTitle.indexOf(" by");
+
+  const title = documentTitle.substring(0, documentTitle.lastIndexOf("-") - 1);
+  const artist = documentTitle.slice(
+    byKeywordIdx + 4,
+    documentTitle.indexOf("|", byKeywordIdx) - 1
+  );
+
+  return { title, artist };
 };
 
-const StatusTexts = {
-  [StatusTextStates.LOADING]: "Loading...",
-  [StatusTextStates.NOT_IN_VALID_WEBSITE]: "Not in a valid site",
-  [StatusTextStates.DONE]: "Done!",
-  [StatusTextStates.ERROR]: "Error :(",
-  [StatusTextStates.UNSET]: ":)",
-};
+const sendUrlToBackground = (url) =>
+  browserObj.runtime.sendMessage({
+    type: "redirect-url",
+    url,
+  });
 
-// todo: remove -------------------
-
+const browserObj = typeof chrome !== "undefined" ? chrome : browser;
 const statusText = document.getElementById("status");
 
-browser.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-  browser.tabs.sendMessage(tabs[0].id, {
-    command: "redirectToSpotify",
-  });
-});
+const setStatusText = (text) => (statusText.innerText = text);
 
-browser.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-  if (request.type !== PopupEventTypes.STATUS) return;
+const onOpenExtension = async ([tab]) => {
+  if (!tab.url.includes(SPOTIFY_TRACK_URL)) {
+    setStatusText("Not in a valid site");
+    return;
+  }
 
-  statusText.innerText = StatusTexts[request.status];
-});
+  setStatusText("Loading");
+
+  try {
+    const { title, artist } = getTitleAndArtistFromTab(tab);
+    const resultUrl = await getUrlInYoutubeMusic({ title, artist });
+    sendUrlToBackground(resultUrl);
+
+    setStatusText("Done");
+  } catch (error) {
+    console.log("Something went wrong", error);
+    setStatusText("Error :(");
+  }
+};
+
+browserObj.tabs.query({ active: true, currentWindow: true }, onOpenExtension);
