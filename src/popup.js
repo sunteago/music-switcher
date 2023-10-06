@@ -24,7 +24,7 @@ const getTitleAndArtistFromTab = (tab) => {
   const title = documentTitle.substring(0, documentTitle.lastIndexOf("-") - 1);
   const artist = documentTitle.slice(
     byKeywordIdx + 4,
-    documentTitle.indexOf("|", byKeywordIdx) - 1
+    documentTitle.indexOf("|", byKeywordIdx) - 1,
   );
 
   return { title, artist };
